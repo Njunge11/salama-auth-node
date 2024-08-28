@@ -16,8 +16,11 @@ export const createAccount = async (req: Request, res: Response) => {
 }
 
 export const login = async (req: Request, res: Response) => {
-  const result = await loginAccount(req)
-  return res.status(200).send('oposh buda1')
+  const result = await loginAccount(req, res)
+  if (result.success) {
+    return res.status(200).json(result.data)
+  }
+  return res.status(result.error?.status || 500).json(result.error)
 }
 
 export const getAccounts = async (req: Request, res: Response) => {}

@@ -1,6 +1,7 @@
-import { Request } from 'express'
+import { Request, Response } from 'express'
 import { insertOne, findOne, updateOne, deleteOne } from '../util/crudUtil'
 import { passwordMatches } from '../middlewares/hashPassword'
+import { generateToken } from '../middlewares/verifyToken'
 
 const accountsTable = 'developer_accounts'
 const accountSettingsTable = 'developer_account_settings'
@@ -29,7 +30,7 @@ export const createDeveloperAccount = async (req: Request) => {
   return accountSettings
 }
 
-export const handleMatchedPassword = async (developerAccount: any) => {
+export const handleMatchedPassword = async (developerAccount: any, res: Response) => {
   interface DeveloperAccount {
     account_id: string
     [key: string]: any
@@ -49,22 +50,35 @@ export const handleMatchedPassword = async (developerAccount: any) => {
       current_sign_in_ip: '',
     },
   )
-  const { password, ...reductedData } = developerAccount.data
-  const reductedResponse = { ...developerAccount, data: reductedData }
-  console.log(reductedResponse)
-  return reductedResponse
+  if (updateLoginDetails.success) {
+    const { password, ...reductedData } = developerAccount.data
+    const developer = {
+      account_id: developerAccount.data.account_id,
+      email: developerAccount.data.email,
+      developer_account_user_role: developerAccount.data.developer_account_user_role,
+    }
+    res.cookie('token', generateToken(developer), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      expires: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    return { ...developerAccount, data: reductedData }
+  }
+  return updateLoginDetails
 }
 
 export const handleUnmatchedPassword = async () => {}
 
-export const loginAccount = async (req: Request) => {
+export const loginAccount = async (req: Request, res: Response) => {
   const { email, password } = req.body
   const developerAccount = await findOne(accountsTable, { email })
 
   if (developerAccount.success) {
     const isMatch = await passwordMatches(password, developerAccount.data.password)
     if (isMatch) {
-      return await handleMatchedPassword(developerAccount)
+      return await handleMatchedPassword(developerAccount, res)
     } else {
       return await handleUnmatchedPassword()
     }

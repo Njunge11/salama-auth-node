@@ -60,7 +60,7 @@ export async function updateOne<T>(tableName: string, where: Partial<T>, item: P
     const setClause =
       Object.entries(item)
         .map(([key], index) => `${key} = $${index + 1 + Object.keys(where).length}`)
-        .join(', ') + `, updatedat = NOW()`
+        .join(', ') + `, updated_at = NOW()`
     const sql = `UPDATE ${tableName} SET ${setClause} WHERE ${whereClause} RETURNING *`
     const values = [...Object.values(where), ...Object.values(item)]
     const result = await db.query(sql, values)

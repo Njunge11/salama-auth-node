@@ -13,6 +13,7 @@ import {
   loginSchema,
 } from '../schemas/accountSchema'
 import { hashPassword } from '../middlewares/hashPassword'
+import { verifyToken } from '../middlewares/verifyToken'
 
 const router = Router()
 
@@ -24,9 +25,12 @@ router.delete('/settings/:id', deleteAccountSettings)
 router.post('/', validateRequest(createAccountSchema), hashPassword, createAccount)
 router.post('/verify')
 router.post('/login', validateRequest(loginSchema), login)
-router.post('/logout')
-router.put('/', createAccount)
-router.get('/', createAccount)
-router.delete('/', createAccount)
+router.post('/logout', verifyToken, (req, res) => {
+  res.clearCookie('token')
+  res.status(200).json({ message: 'Logged out successfully' })
+})
+router.get('/', verifyToken, createAccount)
+router.delete('/', verifyToken, createAccount)
+router.put('/', verifyToken, createAccount)
 
 export default router
