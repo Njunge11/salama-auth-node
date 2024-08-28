@@ -50,6 +50,36 @@ export async function findOne<T>(
   }
 }
 
+export async function find<T>(
+  tableName: string,
+  query: Partial<T> = {},
+  columns: string[] = ['*'],
+) {
+  try {
+    const db: Pool = await database()
+    const selectClause = columns.join(', ')
+    const whereClause = Object.entries(query)
+      .map(([key], index) => `${key} = $${index + 1}`)
+      .join(' AND ')
+    const sql = `SELECT ${selectClause} FROM ${tableName} ${whereClause ? `WHERE ${whereClause}` : ''}`
+    const values = Object.values(query)
+    const result = await db.query(sql, values)
+    if (result.rows.length === 0) {
+      return {
+        success: false,
+        error: createProblemDetails('Not Found', 404, 'No record found to update.'),
+      }
+    }
+    return { success: true, data: result.rows[0] }
+  } catch (error) {
+    console.error('Error during findOne operation:', error)
+    return {
+      success: false,
+      error: createProblemDetails('Internal Server Error', 500, 'An unexpected error occured'),
+    }
+  }
+}
+
 export async function updateOne<T>(tableName: string, where: Partial<T>, item: Partial<T>) {
   try {
     const db: Pool = await database()

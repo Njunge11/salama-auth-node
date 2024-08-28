@@ -12,6 +12,10 @@ export const loginSchema = z.object({
   password: z.string(),
 })
 
+export const idSchema = z.object({
+  id: z.string().uuid(),
+})
+
 export const createAccountSettingsSchema = z
   .object({
     lock_strategy: z.enum(['failed_attempts', 'none']),

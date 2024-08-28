@@ -1,11 +1,26 @@
 import { Request, Response, NextFunction } from 'express'
-import { ZodSchema, ZodError, Schema } from 'zod'
+import { ZodSchema, ZodError } from 'zod'
 import { createProblemDetails } from '../util/problemDetails'
 
-export const validateRequest = (schema: ZodSchema) => {
+type ValidTarget = 'body' | 'params' | 'query'
+export const validateRequest = (schema: ZodSchema, target: ValidTarget) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      schema.parse(req.body)
+      let dataToValidate: any
+      switch (target) {
+        case 'body':
+          dataToValidate = req.body
+          break
+        case 'params':
+          dataToValidate = req.params
+          break
+        case 'query':
+          dataToValidate = req.query
+          break
+        default:
+          throw new Error('Invalid validation target')
+      }
+      schema.parse(dataToValidate)
       next()
     } catch (error) {
       if (error instanceof ZodError) {

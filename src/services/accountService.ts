@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { insertOne, findOne, updateOne, deleteOne } from '../util/crudUtil'
+import { insertOne, findOne, updateOne, deleteOne, find } from '../util/crudUtil'
 import { passwordMatches } from '../middlewares/hashPassword'
 import { generateToken } from '../middlewares/verifyToken'
 
@@ -30,6 +30,44 @@ export const createDeveloperAccount = async (req: Request) => {
   return accountSettings
 }
 
+export const getDeveloperAccounts = async (req: Request) => {
+  const developerAccount = await find(accountsTable)
+  if (developerAccount.success) {
+    const {
+      password,
+      locked_at,
+      failed_attempts,
+      current_sign_in_ip,
+      last_sign_in_ip,
+      signin_count,
+      current_sign_in_at,
+      last_sign_in_at,
+      ...reductedData
+    } = developerAccount.data
+    return { ...developerAccount, data: reductedData }
+  }
+  return developerAccount
+}
+
+export const getDeveloperAccount = async (req: Request) => {
+  const account_id = req.params.id
+  const developerAccount = await findOne(accountsTable, { account_id })
+  if (developerAccount.success) {
+    const {
+      password,
+      locked_at,
+      failed_attempts,
+      current_sign_in_ip,
+      last_sign_in_ip,
+      signin_count,
+      current_sign_in_at,
+      last_sign_in_at,
+      ...reductedData
+    } = developerAccount.data
+    return { ...developerAccount, data: reductedData }
+  }
+  return developerAccount
+}
 export const handleMatchedPassword = async (developerAccount: any, res: Response) => {
   interface DeveloperAccount {
     account_id: string
@@ -51,7 +89,17 @@ export const handleMatchedPassword = async (developerAccount: any, res: Response
     },
   )
   if (updateLoginDetails.success) {
-    const { password, ...reductedData } = developerAccount.data
+    const {
+      password,
+      locked_at,
+      failed_attempts,
+      current_sign_in_ip,
+      last_sign_in_ip,
+      signin_countm,
+      current_sign_in_at,
+      last_sign_in_at,
+      ...reductedData
+    } = developerAccount.data
     const developer = {
       account_id: developerAccount.data.account_id,
       email: developerAccount.data.email,
@@ -70,6 +118,11 @@ export const handleMatchedPassword = async (developerAccount: any, res: Response
 }
 
 export const handleUnmatchedPassword = async () => {}
+
+export const deleteDeveloperAccount = async (req: Request) => {
+  const account_id = req.params.id
+  return await deleteOne(accountsTable, { account_id })
+}
 
 export const loginAccount = async (req: Request, res: Response) => {
   const { email, password } = req.body
