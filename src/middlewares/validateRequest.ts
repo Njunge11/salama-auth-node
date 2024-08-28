@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import { ZodSchema, ZodError, Schema } from 'zod'
-import { createPromblemDetails } from '../util/problemDetails'
+import { createProblemDetails } from '../util/problemDetails'
 
 export const validateRequest = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -16,7 +16,7 @@ export const validateRequest = (schema: ZodSchema) => {
         return res
           .status(400)
           .json(
-            createPromblemDetails(
+            createProblemDetails(
               'Invalid request parameters',
               400,
               'One or more fields are invalid',
@@ -28,7 +28,7 @@ export const validateRequest = (schema: ZodSchema) => {
       }
       return res
         .status(500)
-        .json(createPromblemDetails('Invalid Server Error', 500, 'An unexpected error occured.'))
+        .json(createProblemDetails('Invalid Server Error', 500, 'An unexpected error occured.'))
     }
   }
 }

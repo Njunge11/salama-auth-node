@@ -1,4 +1,4 @@
-export const createPromblemDetails = (
+export const createProblemDetails = (
   title: string = 'about:blank',
   status: number,
   detail?: string,

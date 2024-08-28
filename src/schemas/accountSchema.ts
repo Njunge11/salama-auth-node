@@ -1,28 +1,34 @@
 import { z } from 'zod'
 
 export const createAccountSchema = z.object({
+  developer_account_setting_id: z.string().uuid(),
   email: z.string().email(),
-  password: z.string().min(8),
-  accountUserRole: z.enum(['read', 'read_write']),
+  password: z.string().min(8, 'Password must be at least 8 characters long'),
+  developer_account_user_role: z.enum(['read', 'read_write', 'admin']),
+})
+
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string(),
 })
 
 export const createAccountSettingsSchema = z
   .object({
-    lockStrategy: z.enum(['failed_attempts', 'none']),
-    unlockStrategy: z.enum(['time', 'email', 'both', 'none']).optional(),
-    maximumAttempts: z.number().min(1).optional(),
-    unlockIn: z.number().optional(),
+    lock_strategy: z.enum(['failed_attempts', 'none']),
+    unlock_strategy: z.enum(['time', 'email', 'both', 'none']).optional(),
+    maximum_attempts: z.number().min(1).optional(),
+    unlock_in: z.number().optional(),
   })
   .refine(
     (data) => {
-      if (data.lockStrategy === 'none') {
-        return data.unlockStrategy === 'none' && !data.maximumAttempts && !data.unlockIn
+      if (data.lock_strategy === 'none') {
+        return data.unlock_strategy === 'none' && !data.maximum_attempts && !data.unlock_in
       }
-      if (data.lockStrategy === 'failed_attempts') {
+      if (data.lock_strategy === 'failed_attempts') {
         return (
-          data.unlockStrategy !== 'none' &&
-          data.maximumAttempts !== undefined &&
-          data.unlockIn !== undefined
+          data.unlock_strategy !== 'none' &&
+          data.maximum_attempts !== undefined &&
+          data.unlock_in !== undefined
         )
       }
       return true

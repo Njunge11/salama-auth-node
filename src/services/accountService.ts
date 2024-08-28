@@ -1,18 +1,113 @@
 import { Request } from 'express'
-import crudUtil from '../util/crudUtil'
+import { insertOne, findOne, updateOne, deleteOne } from '../util/crudUtil'
+import { passwordMatches } from '../middlewares/hashPassword'
 
-const database = crudUtil('account_settings')
+const accountsTable = 'developer_accounts'
+const accountSettingsTable = 'developer_account_settings'
 
-export const createDeveloperAccount = async () => {
-  return 'Account Created'
+export const createDeveloperAccount = async (req: Request) => {
+  const { developer_account_setting_id, email, password, developer_account_user_role } = req.body
+  const accountSettings = await findOne(accountSettingsTable, { developer_account_setting_id })
+  if (!accountSettings.success && accountSettings.error?.status == 404) {
+    const updatedError = {
+      ...accountSettings.error,
+      status: 400,
+      detail: `No developer_account_setting for developer_account_setting_id ${developer_account_setting_id}`,
+    }
+    return { ...accountSettings, error: updatedError }
+  }
+
+  if (accountSettings.success) {
+    return await insertOne(accountsTable, {
+      developer_account_setting_id,
+      email,
+      password,
+      developer_account_user_role,
+    })
+  }
+
+  return accountSettings
+}
+
+export const handleMatchedPassword = async (developerAccount: any) => {
+  interface DeveloperAccount {
+    account_id: string
+    [key: string]: any
+  }
+  const updateLoginDetails = await updateOne<DeveloperAccount>(
+    accountsTable,
+    {
+      account_id: developerAccount.data.account_id,
+    },
+    {
+      signin_count: developerAccount.data.signin_count + 1,
+      last_sign_in_at: developerAccount.data.current_sign_in_at
+        ? developerAccount.data.current_sign_in_at
+        : new Date().toISOString(),
+      current_sign_in_at: new Date().toISOString(),
+      last_sign_in_ip: '',
+      current_sign_in_ip: '',
+    },
+  )
+  const { password, ...reductedData } = developerAccount.data
+  const reductedResponse = { ...developerAccount, data: reductedData }
+  console.log(reductedResponse)
+  return reductedResponse
+}
+
+export const handleUnmatchedPassword = async () => {}
+
+export const loginAccount = async (req: Request) => {
+  const { email, password } = req.body
+  const developerAccount = await findOne(accountsTable, { email })
+
+  if (developerAccount.success) {
+    const isMatch = await passwordMatches(password, developerAccount.data.password)
+    if (isMatch) {
+      return await handleMatchedPassword(developerAccount)
+    } else {
+      return await handleUnmatchedPassword()
+    }
+  }
+  return developerAccount
 }
 
 export const createDeveloperAccountSettings = async (req: Request) => {
-  const { lockStrategy, unlockStrategy, maximumAttempts, unlockIn } = req.body
-  return (await database).create({
-    lockStrategy,
-    unlockStrategy,
-    maximumAttempts,
-    unlockIn,
+  const { lock_strategy, unlock_strategy, maximum_attempts, unlock_in } = req.body
+  interface AccountSettings {
+    settingsId: string
+    [key: string]: any
+  }
+  const accountSettings = await findOne(accountSettingsTable)
+
+  if (!accountSettings.success && accountSettings.error?.status != 404) return accountSettings
+
+  if (accountSettings.success) {
+    return await updateOne<AccountSettings>(
+      accountSettingsTable,
+      { settingsid: accountSettings.data.settingsid },
+      {
+        lock_strategy,
+        unlock_strategy,
+        maximum_attempts,
+        unlock_in,
+      },
+    )
+  }
+
+  return await insertOne(accountSettingsTable, {
+    lock_strategy,
+    unlock_strategy,
+    maximum_attempts,
+    unlock_in,
   })
+}
+
+export const getDeveloperAccountSettings = async () => {
+  return await findOne(accountSettingsTable)
+}
+
+export const deleteDeveloperAccountSettings = async (req: Request) => {
+  const settingsid = req.params.id
+  return await deleteOne(accountSettingsTable, { settingsid })
 }
